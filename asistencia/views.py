@@ -7,10 +7,15 @@ from django.http import HttpResponse, JsonResponse
 from .models import Usuario, Asistencia
 from .forms import UsuarioForm  # Asegúrate de importar correctamente el formulario
 from django.core.files.base import ContentFile
+from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.models import User
+from django.contrib.auth import login
+
+from django.db import IntegrityError
 
 def index(request):
     usuarios = Usuario.objects.all()
-    return render(request, 'asistencia/index.html', {'usuarios': usuarios})
+    return render(request, 'index.html', {'usuarios': usuarios})
 
 def capturar(request):
     if request.method == 'POST':
@@ -63,14 +68,14 @@ def agregar_usuario(request):
             return redirect('asistencia/')  # Redirige a la página deseada después de guardar el usuario
     else:
         form = UsuarioForm()
-    return render(request, 'asistencia/agregar_usuario.html', {'form': form})
+    return render(request, 'agregar_usuario.html', {'form': form})
 
 
 def vista_alumnos(request):
     if request.method == 'POST':
         # Verificar si se ha enviado un formulario de eliminación de usuario
         usuario_id = request.POST.get('usuario_id')
-        if usuario_id:
+        if usuario_id:  
             try:
                 usuario = Usuario.objects.get(id=usuario_id)
                 usuario.delete()
@@ -80,7 +85,23 @@ def vista_alumnos(request):
                 pass  # Puedes manejar el caso donde el usuario no existe si lo deseas
 
     usuarios = Usuario.objects.all()
-    return render(request, 'asistencia/alumnos.html', {'usuarios': usuarios})
+    return render(request, 'alumnos.html', {'usuarios': usuarios})
 
+def vista_signup(request):
 
+     if request.method == 'GET':
+        return render(request, 'signup.html', {"form": UserCreationForm})
+     else:
+
+        if request.POST["password1"] == request.POST["password2"]:
+            try:
+                user = User.objects.create_user(
+                    request.POST["username"], password=request.POST["password1"])
+                user.save()
+                login(request, user)
+                return redirect('index')
+            except IntegrityError:
+                return render(request, 'signup.html', {"form": UserCreationForm, "error": "Username already exists."})
+
+        return render(request, 'signup.html', {"form": UserCreationForm, "error": "Passwords did not match."})
 
